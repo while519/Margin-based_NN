@@ -1,5 +1,6 @@
 
 import numpy
+import numpy as np
 import theano
 import theano.tensor as T
 import os
@@ -496,3 +497,32 @@ def trainFnMember(prdist, topLayer, botLayer=None, marge=1.):
 
     return theano.function(list_in, [T.mean(cost), T.mean(out), T.mean(p)],
                            updates=updates, on_unused_input='warn')
+
+# ----------------------------------------------------------------------------
+def pca(X=np.array([]), no_dims=30):
+    """Runs PCA on the MxN array X in order to reduce its dimensionality to no_dims dimensions.
+       Y = pca(X, state.initial_dim)
+    """
+
+    print("Preprocessing the data using PCA...")
+    X = X - np.mean(X, 0)  # (M, N) - (N,) using broadcasting
+    (_, v) = np.linalg.eig(np.dot(X.T, X))
+    Y = np.dot(X, v[:, 0:no_dims])
+    return Y
+
+# ----------------------------------------------------------------------------
+def consine_simi(X=np.array([])):
+    """
+        Return the cosine similarity matrix for input matrix X
+    :param X: (M x N) sample matrix
+    :return: P: (M x M) consine similarity measure based on the N features
+    """
+    inner_product = np.dot(X, X.T)              # (M, M)
+    square_magnitude = np.diag(inner_product)    # (M,)
+    inv_square_magnitude = 1 / square_magnitude
+
+    inv_square_magnitude[np.isinf(inv_square_magnitude)] = 0
+
+    inv_magnitude = np.sqrt(inv_square_magnitude)
+    cosine = inner_product * inv_magnitude
+    return cosine.T * inv_magnitude

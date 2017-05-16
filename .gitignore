@@ -2,3 +2,7 @@
 *.fig
 
 *.eps
+
+*.xml
+
+.idea/Margin-based_NN.iml
