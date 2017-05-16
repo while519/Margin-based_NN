@@ -533,3 +533,49 @@ def consine_simi(X=np.array([])):
     inv_magnitude = np.sqrt(inv_square_magnitude)
     cosine = inner_product * inv_magnitude
     return cosine.T * inv_magnitude
+
+# Embeddings class -----------------------------------------------------------
+class Embeddings(object):
+    """Class for the embeddings matrix."""
+
+    def __init__(self, rng, N, D, tag=''):
+        """
+        Constructor.
+
+        :param rng: numpy.random module for number generation.
+        :param N: number of the samples.
+        :param D: dimension of the desired dimensionality.
+        :param tag: name of the embedding matrix.
+        """
+        self.N = N
+        self.D = D
+        wbound = np.sqrt(6. / D)
+        W_values = rng.uniform(low=-wbound, high=wbound, size=(N, D))
+        W_values = np.asarray(W_values, dtype=theano.config.floatX)
+        self.E = theano.shared(value=W_values, name='E' + tag)
+
+def trainFn1Member(prdist, embedding,  marge=1.):
+    # declare input variables
+    inpl, inpr, inpln, inprn = T.ivectors(4)
+    lrparams = T.scalar('lr parameters')
+
+
+    Dist = L2distance(embedding.E)
+    Pr = prdist(Dist) + T.constant(1e-12)
+    p = Pr[inpr, inpl]
+    prn = Pr[inprn, inpl]
+    pln = Pr[inpr, inpln]
+
+    costl, outl = margincost(p, pln, marge)
+    costr, outr = margincost(p, prn, marge)
+    cost = costl + costr
+    out = T.concatenate([outl, outr])
+
+    list_in = [inpl, inpr, inpln, inprn, lrparams]
+
+    # define the updates dict
+    gparams = T.grad(cost, embedding.E, disconnected_inputs='warn')
+    updates = OrderedDict({embedding.E: embedding.E - lrparams * gparams})
+
+    return theano.function(list_in, [T.mean(cost), T.mean(out), T.mean(p)],
+                           updates=updates, on_unused_input='warn')
