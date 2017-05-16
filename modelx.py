@@ -350,6 +350,10 @@ class LayerRBM(RBM):
         _, h1_mean, _ = self.sample_h_given_v(self.input)
         return h1_mean
 
+    def layerout(self, V0samples):
+        _, h1_mean, _ = self.sample_h_given_v(V0samples)
+        return h1_mean
+
 # L2 distance
 def L2distance(input):
     sumY = T.sum(T.sqr(input), axis=1)  # column sum, sumY.shape = (M,)
@@ -389,10 +393,13 @@ class Layer(object):
 
     def __call__(self, x=None):
         if x is None:
-            x = self.input
+            y = self.input
         else:
-            x = self.act(input)
-        return x
+            y = self.act(x)
+        return y
+
+    def layerout(self, V0samples):
+        return V0samples
 
 class LayerWeight(object):
     """

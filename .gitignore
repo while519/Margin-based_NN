@@ -6,3 +6,5 @@
 *.xml
 
 .idea/Margin-based_NN.iml
+
+__pycache__/modelx.cpython-36.pyc

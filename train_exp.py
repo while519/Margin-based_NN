@@ -135,7 +135,7 @@ def SGDexp(state, _log):
                 state.bestout = np.mean(out)
                 state.lr_params *= 1.01
             else:
-                state.lr_params *= .01
+                state.lr_params *= .1
 
         if (epoch_count % state.neval) == 0:
             _log.info('-- EPOCH %s (%s seconds per epoch):' % (epoch_count, (time.time() - timeref) / state.neval))
@@ -148,12 +148,15 @@ def SGDexp(state, _log):
             Pr = apply_fn(topLayer(ph_activate)).eval()
             state.train = np.mean(RankScoreIdx(Pr, state.trIdxl, state.trIdxr))
             _log.debug('Training set Mean Rank: %s  Score: %s' % (state.train, np.mean(Pr[state.trIdxr, state.trIdxl])))
+
+            ph_activate = botLayer.layerout(state.X)
+            Pr = apply_fn(topLayer(ph_activate)).eval()
+            state.test = np.mean(RankScoreIdx(Pr, state.teIdxl, state.teIdxr))
+            _log.debug('Testing set Mean Rank: %s  Score: %s' % (state.test, np.mean(Pr[state.teIdxr, state.teIdxl])))
             state.cepoch = epoch_count
             f = open(state.savepath + '/' + 'model' + '.pkl', 'wb')  # + str(state.cepoch)
             pickle.dump(state, f, -1)
             f.close()
-            # savemat('linpred_dim' + str(state.outdim) + '_method' + state.applyfn +
-            #         '_marge' + str(state.marge) + '.mat', {'A': mapping.E.eval()})
             _log.debug('The saving took %s seconds' % (time.time() - timeref))
             timeref = time.time()
 
@@ -169,15 +172,15 @@ def SGDexp(state, _log):
         pickle.dump(state, f, -1)
         f.close()
 
-def launch(lr_rbm=0.01, rbm_training_epochs=15, totepochs=200, n_out=30,
-           dataname='webkb', rbm_batch_size=20, datapath='./Data/', savepath='Output',
-           n_chains=20, apply_fn='softcauchy', marge_ratio=5., seed=213, pretrain=True,
-           n_hidden=30, lr_params=1., op='Mahalanobis'):
+def launch(lr_rbm=0.01, rbm_training_epochs=15, totepochs=200, n_out=30, neval=10,
+           dataname='webkb', rbm_batch_size=20, savepath='Output', datapath='./',
+           n_chains=20, apply_fn='softmax', marge_ratio=5., seed=213, pretrain=True,
+           n_hidden=30, lr_params=1000., op='None'):
     # configure logging
     FORMAT = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
     _log = logging.getLogger(dataname + ' experiment')
     _log.setLevel(logging.DEBUG)
-    ch_file = logging.FileHandler(filename='predict_' +
+    ch_file = logging.FileHandler(filename='predict_' + 'marge' +
                                            str(marge_ratio) + '.log', mode='w')
     ch_file.setLevel(logging.DEBUG)
     ch_file.setFormatter(FORMAT)
@@ -196,29 +199,31 @@ def launch(lr_rbm=0.01, rbm_training_epochs=15, totepochs=200, n_out=30,
     state.rbm_training_epochs = rbm_training_epochs
     state.dataname = dataname
     state.rbm_batch_size = rbm_batch_size
-    state.datapath = datapath
     state.savepath = savepath
     state.n_chains = n_chains
     state.n_hidden = n_hidden
     state.marge_raio = marge_ratio
     state.seed = seed
     state.totepochs = totepochs
-    state.neval = 1
+    state.neval = neval
     state.n_out = n_out
     state.pretrain = pretrain
+    state.datapath = datapath
 
-    # check the datapath
-    assert state.datapath is not None
 
     if state.savepath not in os.listdir('./'):
         os.mkdir(state.savepath)
 
-    # load the matlab data file
-    mat = loadmat(state.datapath + state.dataname + '.mat')
-    state.train_set = theano.shared(value=np.array(mat['X'], dtype=theano.config.floatX), borrow=True)
-    I = np.array(mat['I'], np.float32)
-    state.trIdxl = np.asarray(I[:, 0].flatten() - 1, dtype='int32')  # numpy indexes start from 0
-    state.trIdxr = np.asarray(I[:, 1].flatten() - 1, dtype='int32')
+    # load the parsed data file
+    f = open(datapath + dataname + '/' + dataname + '.pkl', 'rb')
+    state.X = theano.shared(value=np.array(pickle.load(f), dtype=theano.config.floatX), borrow=True)
+    state.train_set = theano.shared(value=np.array(pickle.load(f), dtype=theano.config.floatX), borrow=True)
+    state.test_set = theano.shared(value=np.array(pickle.load(f), dtype=theano.config.floatX), borrow=True)
+    state.trIdxl = np.asarray(pickle.load(f), dtype='int32')  # numpy indexes start from 0
+    state.trIdxr = np.asarray(pickle.load(f), dtype='int32')
+    state.teIdxl = np.asarray(pickle.load(f), dtype='int32')  # numpy indexes start from 0
+    state.teIdxr = np.asarray(pickle.load(f), dtype='int32')
+    f.close()
 
     state.n_samples, state.n_features = np.shape(state.train_set.get_value(borrow=True))
     state.n_links = np.shape(state.trIdxl)[0]
