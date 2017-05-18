@@ -17,7 +17,7 @@ applyfn = 'softmax'
 
 # adjustable parameters
 outdim = 2
-marge_ratio = 5.
+marge_ratio = 1.
 
 FORMAT = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 _log = logging.getLogger(dataname +' experiment')
@@ -46,11 +46,12 @@ def SGDexp(state):
 
     # Function compilation
     apply_fn = eval(state.applyfn)
-    trainfunc = trainFn1Member(apply_fn, embedding, state.marge)
+    trainfunc = trainFn1Member(apply_fn, embedding, state.marge, state.reg)
 
     out = []
     outb = []
     outc = []
+    outd = []
     batchsize = math.floor(state.nlinks / state.nbatches)
     state.bestout = np.inf
 
@@ -78,18 +79,20 @@ def SGDexp(state):
                 out += [outtmp[0]]
                 outb += [outtmp[1]]
                 outc += [outtmp[2]]
+                outd += [outtmp[3]]
                 # mapping.normalize()
 
             if np.mean(out) <= state.bestout:
                 state.bestout = np.mean(out)
-                state.lrmapping *= 1.1
+                state.lrmapping *= 1.01
             else:
-                state.lrmapping *= .1
+                state.lrmapping *= .4
 
         if (epoch_count % state.neval) == 0:
             _log.info('-- EPOCH %s (%s seconds per epoch):' % (epoch_count, (time.time() - timeref) / state.neval))
             _log.info('Cost mean: %s +/- %s      updates: %s%% ' % (np.mean(out), np.std(out), np.mean(outb) * 100))
-            _log.debug('Learning rate: %s LeaveOneOut: %s' % (state.lrmapping, np.mean(outc)))
+            _log.debug('Learning rate: %s LeaveOneOut: %s  Regularization: %s' %
+                       (state.lrmapping, np.mean(outc), np.mean(outd)))
 
             timeref = time.time()
             Dist = L2distance(embedding.E)
@@ -105,9 +108,10 @@ def SGDexp(state):
         outb = []
         outc = []
         out = []
+        outd = []
         state.bestout = np.inf
         if state.lrmapping < state.baselr:      # if the learning rate is not growing
-            state.baselr *= 0.1
+            state.baselr *= 0.4
         state.lrmapping = state.baselr
         f = open(state.savepath + '/' + 'state.pkl', 'wb')
         pickle.dump(state, f, -1)
@@ -135,7 +139,7 @@ if __name__ == '__main__':
 
     state.seed = 213
     state.totepochs = 1200
-    state.lrmapping = 1000.
+    state.lrmapping = .5
     state.baselr = state.lrmapping
     state.regterm = .0
     state.nsamples, state.nfeatures = np.shape(X)
@@ -147,6 +151,7 @@ if __name__ == '__main__':
     state.nbatches = 1  # mini-batch SGD is not helping here
     state.neval = 10
     state.initial_dim = 300
+    state.reg = 1.
 
 
     # cosine similarity measure

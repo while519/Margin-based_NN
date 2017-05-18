@@ -135,7 +135,7 @@ def SGDexp(state, _log):
                 state.bestout = np.mean(out)
                 state.lr_params *= 1.01
             else:
-                state.lr_params *= .1
+                state.lr_params *= .4
 
         if (epoch_count % state.neval) == 0:
             _log.info('-- EPOCH %s (%s seconds per epoch):' % (epoch_count, (time.time() - timeref) / state.neval))
@@ -165,7 +165,7 @@ def SGDexp(state, _log):
         out = []
         state.bestout = np.inf
         if state.lr_params < state.base_lr:      # if the learning rate is not growing
-            state.base_lr *= 0.1
+            state.base_lr *= 0.4
 
         state.lr_params = state.base_lr
         f = open(state.savepath + '/' + 'state.pkl', 'wb')

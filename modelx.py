@@ -354,6 +354,13 @@ class LayerRBM(RBM):
         _, h1_mean, _ = self.sample_h_given_v(V0samples)
         return h1_mean
 
+# Similarity functions -------------------------------------------------------
+def L1norm(left, right):
+    return  T.sum(T.abs_(left - right), axis=None)
+
+def L2norm(left, right):
+    return  T.sqrt(T.sum(T.sqr(left - right), axis=None))
+
 # L2 distance
 def L2distance(input):
     sumY = T.sum(T.sqr(input), axis=1)  # column sum, sumY.shape = (M,)
@@ -554,7 +561,7 @@ class Embeddings(object):
         W_values = np.asarray(W_values, dtype=theano.config.floatX)
         self.E = theano.shared(value=W_values, name='E' + tag)
 
-def trainFn1Member(prdist, embedding,  marge=1.):
+def trainFn1Member(prdist, embedding,  marge=1., reg=0.):
     # declare input variables
     inpl, inpr, inpln, inprn = T.ivectors(4)
     lrparams = T.scalar('lr parameters')
@@ -568,7 +575,9 @@ def trainFn1Member(prdist, embedding,  marge=1.):
 
     costl, outl = margincost(p, pln, marge)
     costr, outr = margincost(p, prn, marge)
+    reg_term = reg * T.sqrt(T.sum(T.sqr(embedding.E), axis=None))
     cost = costl + costr
+    cost = cost * embedding.E.shape[0]
     out = T.concatenate([outl, outr])
 
     list_in = [inpl, inpr, inpln, inprn, lrparams]
@@ -577,5 +586,5 @@ def trainFn1Member(prdist, embedding,  marge=1.):
     gparams = T.grad(cost, embedding.E, disconnected_inputs='warn')
     updates = OrderedDict({embedding.E: embedding.E - lrparams * gparams})
 
-    return theano.function(list_in, [T.mean(cost), T.mean(out), T.mean(p)],
+    return theano.function(list_in, [T.mean(cost), T.mean(out), T.mean(p), T.mean(reg_term)],
                            updates=updates, on_unused_input='warn')
