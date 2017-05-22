@@ -16,7 +16,7 @@ dataname = 'webkb'
 applyfn = 'softmax'
 
 # adjustable parameters
-outdim = 2
+outdim = 2.
 marge_ratio = 1.
 
 FORMAT = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
@@ -66,16 +66,14 @@ def SGDexp(state):
         listidx = np.arange(state.nsamples, dtype='int32')
         listidx = listidx[np.random.permutation(len(listidx))]
         trainIdxrn = listidx[np.arange(state.nlinks) % len(listidx)]
-        trainIdxln = listidx[np.arange(state.nlinks) % len(listidx)]
 
 
         for _ in range(20):
             for ii in range(state.nbatches):
                 tmpl = trainIdxl[ii * batchsize: (ii + 1) * batchsize]
                 tmpr = trainIdxr[ii * batchsize: (ii + 1) * batchsize]
-                tmpln = trainIdxln[ii * batchsize: (ii + 1) * batchsize]
                 tmprn = trainIdxrn[ii * batchsize: (ii + 1) * batchsize]
-                outtmp = trainfunc(tmpl, tmpr, tmpln, tmprn, state.lrmapping)
+                outtmp = trainfunc(tmpl, tmpr, tmprn, state.lrmapping)
                 out += [outtmp[0]]
                 outb += [outtmp[1]]
                 outc += [outtmp[2]]
@@ -138,8 +136,8 @@ if __name__ == '__main__':
     state.Idxr = np.asarray(I[:, 1].flatten() - 1, dtype='int32')
 
     state.seed = 213
-    state.totepochs = 1200
-    state.lrmapping = .5
+    state.totepochs = 1500
+    state.lrmapping = 1.
     state.baselr = state.lrmapping
     state.regterm = .0
     state.nsamples, state.nfeatures = np.shape(X)

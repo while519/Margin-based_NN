@@ -563,7 +563,7 @@ class Embeddings(object):
 
 def trainFn1Member(prdist, embedding,  marge=1., reg=0.):
     # declare input variables
-    inpl, inpr, inpln, inprn = T.ivectors(4)
+    inpl, inpr, inprn = T.ivectors(3)
     lrparams = T.scalar('lr parameters')
 
 
@@ -571,16 +571,14 @@ def trainFn1Member(prdist, embedding,  marge=1., reg=0.):
     Pr = prdist(Dist) + T.constant(1e-12)
     p = Pr[inpr, inpl]
     prn = Pr[inprn, inpl]
-    pln = Pr[inpr, inpln]
 
-    costl, outl = margincost(p, pln, marge)
     costr, outr = margincost(p, prn, marge)
     reg_term = reg * T.sqrt(T.sum(T.sqr(embedding.E), axis=None))
-    cost = costl + costr
+    cost = costr
     cost = cost * embedding.E.shape[0]
-    out = T.concatenate([outl, outr])
+    out = outr
 
-    list_in = [inpl, inpr, inpln, inprn, lrparams]
+    list_in = [inpl, inpr, inprn, lrparams]
 
     # define the updates dict
     gparams = T.grad(cost, embedding.E, disconnected_inputs='warn')
