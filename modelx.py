@@ -427,7 +427,7 @@ class LayerWeight(object):
 
 class LayerMahalanobis(object):
     """
-    class for a layer with Mahalanobis distance output 
+    class for a layer with Mahalanobis distance output
     """
     def __init__(self, rng, n_inp, n_out, tag='', act='L2distance'):
         self.n_inp = n_inp
@@ -561,9 +561,9 @@ class Embeddings(object):
         W_values = np.asarray(W_values, dtype=theano.config.floatX)
         self.E = theano.shared(value=W_values, name='E' + tag)
 
-def trainFn1Member(prdist, embedding,  marge=1., reg=0.):
+def trainFn2Member(prdist, embedding, Q,  marge=1., reg=0.):
     # declare input variables
-    inpl, inpr, inpln, inprn = T.ivectors(4)
+    inpl, inpr, inprn = T.ivectors(3)
     lrparams = T.scalar('lr parameters')
 
 
@@ -571,20 +571,91 @@ def trainFn1Member(prdist, embedding,  marge=1., reg=0.):
     Pr = prdist(Dist) + T.constant(1e-12)
     p = Pr[inpr, inpl]
     prn = Pr[inprn, inpl]
-    pln = Pr[inpr, inpln]
 
-    costl, outl = margincost(p, pln, marge)
+
     costr, outr = margincost(p, prn, marge)
-    reg_term = reg * T.sqrt(T.sum(T.sqr(embedding.E), axis=None))
-    cost = costl + costr
-    cost = cost * embedding.E.shape[0]
-    out = T.concatenate([outl, outr])
+    KL = T.where(abs(Q) > 1e-12, Q * T.log(Q / Pr),  0)
+    meanKL = T.mean(KL, axis=None)
 
-    list_in = [inpl, inpr, inpln, inprn, lrparams]
+    reg_term = reg * meanKL
+    cost = costr + reg_term
+    cost = cost * embedding.E.shape[0]
+    out = outr
+
+    list_in = [inpl, inpr, inprn, lrparams]
 
     # define the updates dict
     gparams = T.grad(cost, embedding.E, disconnected_inputs='warn')
     updates = OrderedDict({embedding.E: embedding.E - lrparams * gparams})
 
-    return theano.function(list_in, [T.mean(cost), T.mean(out), T.mean(p), T.mean(reg_term)],
+    return theano.function(list_in, [T.mean(costr), T.mean(out), T.mean(p), T.mean(meanKL)],
                            updates=updates, on_unused_input='warn')
+
+    # ----------------------------------------------------------------------------
+def Hbeta(D=np.array([]), beta=1.0):
+    """Compute the perplexity and the P-row for a specific value of the precision of a Gaussian distribution."""
+
+    # Compute P-row and corresponding perplexity
+    P = np.exp(-D.copy() * beta)
+    sumP = sum(P)
+    H = np.log(sumP) + beta * np.sum(D * P) / sumP      # Shannon Entropy
+    P = P / sumP
+    return H, P
+
+
+# ----------------------------------------------------------------------------
+def x2p(X=np.array([]), tol=1e-5, perplexity=30.0):
+    """Performs a binary search to get P-values in such a way that each conditional Gaussian has the same perplexity."""
+
+    # Initialize some variables
+    print("Computing pairwise distances...")
+    (n, d) = X.shape
+    sum_X = np.sum(np.square(X), 1)
+    D = np.add(np.add(-2 * np.dot(X, X.T), sum_X).T, sum_X)
+    P = np.zeros((n, n))
+    beta = np.ones((n, 1))
+    logU = np.log(perplexity)
+
+    # Loop over all datapoints
+    for i in range(n):
+
+        # Print progress
+        if i % 500 == 0:
+            print("Computing P-values for point ", i, " of ", n, "...")
+
+        # Compute the Gaussian kernel and entropy for the current precision
+        betamin = -np.inf
+        betamax = np.inf
+        Di = D[i, np.concatenate((np.r_[0:i], np.r_[i + 1:n]))]
+        (H, thisP) = Hbeta(Di, beta[i])
+
+        # Evaluate whether the perplexity is within tolerance
+        Hdiff = H - logU
+        tries = 0
+        while np.abs(Hdiff) > tol and tries < 50:
+
+            # If not, increase or decrease precision
+            if Hdiff > 0:
+                betamin = beta[i].copy()
+                if betamax == np.inf or betamax == -np.inf:
+                    beta[i] = beta[i] * 2
+                else:
+                    beta[i] = (beta[i] + betamax) / 2
+            else:
+                betamax = beta[i].copy()
+                if betamin == np.inf or betamin == -np.inf:
+                    beta[i] = beta[i] / 2
+                else:
+                    beta[i] = (beta[i] + betamin) / 2;
+
+            # Recompute the values
+            (H, thisP) = Hbeta(Di, beta[i])
+            Hdiff = H - logU
+            tries = tries + 1
+
+        # Set the final row of P
+        P[i, np.concatenate((np.r_[0:i], np.r_[i + 1:n]))] = thisP
+
+    # Return final P-matrix
+    print("Mean value of sigma: ", np.mean(np.sqrt(1 / beta)))
+    return P

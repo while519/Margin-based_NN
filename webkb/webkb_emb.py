@@ -13,7 +13,7 @@ import pickle
 
 # experimental parameters
 dataname = 'webkb'
-applyfn = 'softmax'
+applyfn = 'softcauchy'
 
 # adjustable parameters
 outdim = 2
@@ -46,7 +46,7 @@ def SGDexp(state):
 
     # Function compilation
     apply_fn = eval(state.applyfn)
-    trainfunc = trainFn1Member(apply_fn, embedding, state.marge, state.reg)
+    trainfunc = trainFn2Member(apply_fn, embedding, state.Q, state.marge, state.reg)
 
     out = []
     outb = []
@@ -66,16 +66,14 @@ def SGDexp(state):
         listidx = np.arange(state.nsamples, dtype='int32')
         listidx = listidx[np.random.permutation(len(listidx))]
         trainIdxrn = listidx[np.arange(state.nlinks) % len(listidx)]
-        trainIdxln = listidx[np.arange(state.nlinks) % len(listidx)]
 
 
         for _ in range(20):
             for ii in range(state.nbatches):
                 tmpl = trainIdxl[ii * batchsize: (ii + 1) * batchsize]
                 tmpr = trainIdxr[ii * batchsize: (ii + 1) * batchsize]
-                tmpln = trainIdxln[ii * batchsize: (ii + 1) * batchsize]
                 tmprn = trainIdxrn[ii * batchsize: (ii + 1) * batchsize]
-                outtmp = trainfunc(tmpl, tmpr, tmpln, tmprn, state.lrmapping)
+                outtmp = trainfunc(tmpl, tmpr, tmprn, state.lrmapping)
                 out += [outtmp[0]]
                 outb += [outtmp[1]]
                 outc += [outtmp[2]]
@@ -91,7 +89,7 @@ def SGDexp(state):
         if (epoch_count % state.neval) == 0:
             _log.info('-- EPOCH %s (%s seconds per epoch):' % (epoch_count, (time.time() - timeref) / state.neval))
             _log.info('Cost mean: %s +/- %s      updates: %s%% ' % (np.mean(out), np.std(out), np.mean(outb) * 100))
-            _log.debug('Learning rate: %s LeaveOneOut: %s  Regularization: %s' %
+            _log.debug('Learning rate: %s LeaveOneOut: %s  Entropy: %s' %
                        (state.lrmapping, np.mean(outc), np.mean(outd)))
 
             timeref = time.time()
@@ -139,9 +137,8 @@ if __name__ == '__main__':
 
     state.seed = 213
     state.totepochs = 1200
-    state.lrmapping = .5
+    state.lrmapping = 1.
     state.baselr = state.lrmapping
-    state.regterm = .0
     state.nsamples, state.nfeatures = np.shape(X)
     state.nlinks = np.shape(state.Idxl)[0]
     state.outdim = outdim
@@ -152,11 +149,20 @@ if __name__ == '__main__':
     state.neval = 10
     state.initial_dim = 300
     state.reg = 1.
+    state.perplexity = 20
 
 
     # cosine similarity measure
     simi_X = consine_simi(X)
     np.fill_diagonal(simi_X, 0)
+
+    Y = pca(X, state.initial_dim)
+    # Compute P-values
+    Q = x2p(X, 1e-5, state.perplexity)
+    Q = np.maximum(Q, 1e-12)
+    np.fill_diagonal(Q, 0)
+    _log.info('Maximum probability value of the fixed perplexitied distribution: %s' % (np.max(Q, axis=None),))
+    state.Q = T.as_tensor_variable(np.asarray(Q.T, dtype=theano.config.floatX))
 
     # start the experiments
     SGDexp(state)
