@@ -13,17 +13,18 @@ import pickle
 
 # experimental parameters
 dataname = 'webkb'
-applyfn = 'softcauchy'
+applyfn = 'softmax'
 
 # adjustable parameters
 outdim = 20
 marge_ratio = 1.
+reg = 1.
 
 FORMAT = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 _log = logging.getLogger(dataname +' experiment')
 _log.setLevel(logging.DEBUG)
 ch_file = logging.FileHandler(filename= 'emb_' + applyfn + str(outdim)
-                                        + '_margeratio' + str(marge_ratio) +  '.log', mode='w')
+                                        + '_margeratio' + str(marge_ratio) + '_reg' + str(reg) + '.log', mode='w')
 ch_file.setLevel(logging.DEBUG)
 ch_file.setFormatter(FORMAT)
 ch = logging.StreamHandler()
@@ -123,7 +124,7 @@ def SGDexp(state):
         out = []
         outd = []
         state.bestout = np.inf
-        if state.lrmapping < state.baselr:      # if the learning rate is not growing
+        if state.lrmapping < state.baselr or (epoch_count // 2000):      # if the learning rate is not growing
             state.baselr *= 0.4
         state.lrmapping = state.baselr
         f = open(state.savepath + '/' + 'state.pkl', 'wb')
@@ -151,8 +152,8 @@ if __name__ == '__main__':
     state.Idxr = np.asarray(I[:, 1].flatten() - 1, dtype='int32')
 
     state.seed = 213
-    state.totepochs = 1200
-    state.lrmapping = 1.
+    state.totepochs = 3000
+    state.lrmapping = 10.
     state.baselr = state.lrmapping
     state.nsamples, state.nfeatures = np.shape(X)
     state.nlinks = np.shape(state.Idxl)[0]
@@ -163,8 +164,9 @@ if __name__ == '__main__':
     state.nbatches = 1  # mini-batch SGD is not helping here
     state.neval = 10
     state.initial_dim = 300
-    state.reg = 1.
+    state.reg = reg
     state.perplexity = 20
+
 
 
     # cosine similarity measure
