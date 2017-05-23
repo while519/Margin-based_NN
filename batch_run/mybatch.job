@@ -4,13 +4,13 @@
 #$ -V -j y
 #$ -M while725@gmail.com
 #$ -m abe
-#$ -o out.citeseer_knn_margeratio_dim
-#$ -N citeseer_knn_margeratio_dim
+#$ -o out.webkb_tsne
+#$ -N webkb_tsne
 #$ -l h_rt=71:00:00
 #$ -l h_vmem=16000M
 #$ -l h="comp[2-9]*|comp1[1-9]*"
-#$ -t 1-15
+#$ -t 1-12
 echo "This code is running on " ; hostname
 echo "Start - `date`"
-python3 ./citeseer_predict_lin_$SGE_TASK_ID.py
+python3 ./webkb_predict$SGE_TASK_ID.py
 echo "Finish - `date`"
