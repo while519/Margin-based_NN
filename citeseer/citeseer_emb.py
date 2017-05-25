@@ -13,17 +13,18 @@ import pickle
 
 # experimental parameters
 dataname = 'citeseer'
-applyfn = 'softcauchy'
+applyfn = 'softmax'
 
 # adjustable parameters
 outdim = 2
 marge_ratio = 1.
+reg = 1.
 
 FORMAT = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 _log = logging.getLogger(dataname +' experiment')
 _log.setLevel(logging.DEBUG)
-ch_file = logging.FileHandler(filename= 'emb_' + applyfn + str(outdim)
-                                        + '_margeratio' + str(marge_ratio) +  '.log', mode='w')
+ch_file = logging.FileHandler(filename= dataname + '_emb_' + applyfn + str(outdim)
+                                        + '_margeratio' + str(marge_ratio) + '_reg' + str(reg) + '.log', mode='w')
 ch_file.setLevel(logging.DEBUG)
 ch_file.setFormatter(FORMAT)
 ch = logging.StreamHandler()
@@ -38,8 +39,21 @@ def SGDexp(state):
     _log.info(state)
     np.random.seed(state.seed)
 
-    state.mrank = np.mean(RankScoreIdx(simi_X, state.Idxl, state.Idxr))
-    _log.debug('Content Only:  Mean Rank: %s ' % (state.mrank,))
+    # split the data into training/testing set
+    state.ntrain = math.floor(1. * state.nlinks)
+    state.ntest = state.nlinks - state.ntrain
+    indices = np.random.permutation(state.nlinks)
+    state.trIdxl = state.Idxl[indices[: state.ntrain]]
+    state.trIdxr = state.Idxr[indices[: state.ntrain]]
+
+    state.teIdxl = state.Idxl[indices[state.ntrain :]]
+    state.teIdxr = state.Idxr[indices[state.ntrain :]]
+
+    state.train = np.mean(RankScoreIdx(simi_X, state.trIdxl, state.trIdxr))
+    _log.debug('Content Only: Training set Mean Rank: %s ' % (state.train,))
+    state.test = np.mean(RankScoreIdx(simi_X, state.teIdxl, state.teIdxr))
+    _log.debug('Content Only: Testing set Mean Rank: %s ' % (state.test,))
+
 
     # initialize
     embedding = Embeddings(np.random, state.nsamples, state.outdim)  # N x K
@@ -52,20 +66,20 @@ def SGDexp(state):
     outb = []
     outc = []
     outd = []
-    batchsize = math.floor(state.nlinks / state.nbatches)
+    batchsize = math.floor(state.ntrain / state.nbatches)
     state.bestout = np.inf
 
     _log.info('BEGIN TRAINING')
     timeref = time.time()
     for epoch_count in range(1, state.totepochs + 1):
         # Shuffling
-        order = np.random.permutation(state.nlinks)
-        trainIdxl = state.Idxl[order]
-        trainIdxr = state.Idxr[order]
+        order = np.random.permutation(state.ntrain)
+        trainIdxl = state.trIdxl[order]
+        trainIdxr = state.trIdxr[order]
 
         listidx = np.arange(state.nsamples, dtype='int32')
         listidx = listidx[np.random.permutation(len(listidx))]
-        trainIdxrn = listidx[np.arange(state.nlinks) % len(listidx)]
+        trainIdxrn = listidx[np.arange(state.ntrain) % len(listidx)]
 
 
         for _ in range(20):
@@ -95,11 +109,13 @@ def SGDexp(state):
             timeref = time.time()
             Dist = L2distance(embedding.E)
             Pr = apply_fn(Dist).eval()
-            state.mrank = np.mean(RankScoreIdx(Pr, state.Idxl, state.Idxr))
-            _log.debug('Training set Mean Rank: %s  Score: %s' % (state.mrank, np.mean(Pr[state.Idxr, state.Idxl])))
+            state.train = np.mean(RankScoreIdx(Pr, state.trIdxl, state.trIdxr))
+            _log.debug('Training set Mean Rank: %s  Score: %s' % (state.train, np.mean(Pr[state.trIdxr, state.trIdxl])))
+            state.test = np.mean(RankScoreIdx(Pr, state.teIdxl, state.teIdxr))
+            _log.debug('Testing set Mean Rank: %s  Score: %s' % (state.test, np.mean(Pr[state.teIdxr, state.teIdxl])))
             state.cepoch = epoch_count
-            savemat('emb_dim' + str(state.outdim) + '_method' + state.applyfn +
-                    '_marge' + str(state.marge_ratio) + '.mat', {'mappedX': embedding.E.eval()})
+            savemat(dataname + '_emb_dim' + str(state.outdim) + '_method' + state.applyfn +
+                    '_marge' + str(state.marge_ratio) + '_reg' + str(reg) + '.mat', {'mappedX': embedding.E.eval()})
             _log.debug('The saving took %s seconds' % (time.time() - timeref))
             timeref = time.time()
 
@@ -108,7 +124,7 @@ def SGDexp(state):
         out = []
         outd = []
         state.bestout = np.inf
-        if state.lrmapping < state.baselr:      # if the learning rate is not growing
+        if state.lrmapping < state.baselr or (epoch_count // 2000):      # if the learning rate is not growing
             state.baselr *= 0.4
         state.lrmapping = state.baselr
         f = open(state.savepath + '/' + 'state.pkl', 'wb')
@@ -136,7 +152,7 @@ if __name__ == '__main__':
     state.Idxr = np.asarray(I[:, 1].flatten() - 1, dtype='int32')
 
     state.seed = 213
-    state.totepochs = 1200
+    state.totepochs = 2000
     state.lrmapping = 1.
     state.baselr = state.lrmapping
     state.nsamples, state.nfeatures = np.shape(X)
@@ -148,15 +164,16 @@ if __name__ == '__main__':
     state.nbatches = 1  # mini-batch SGD is not helping here
     state.neval = 10
     state.initial_dim = 300
-    state.reg = 1.
+    state.reg = reg
     state.perplexity = 20
+
 
 
     # cosine similarity measure
     simi_X = consine_simi(X)
     np.fill_diagonal(simi_X, 0)
 
-    Y = pca(X, state.initial_dim)
+    #Y = pca(X, state.initial_dim)
     # Compute P-values
     Q = x2p(X, 1e-5, state.perplexity)
     Q = np.maximum(Q, 1e-12)

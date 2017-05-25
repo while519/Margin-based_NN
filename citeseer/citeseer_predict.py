@@ -13,17 +13,18 @@ import pickle
 
 # experimental parameters
 dataname = 'citeseer'
-applyfn = 'softcauchy'
+applyfn = 'softmax'
 
 # adjustable parameters
 outdim = 20
 marge_ratio = 1.
+reg = 0.
 
 FORMAT = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 _log = logging.getLogger(dataname +' experiment')
 _log.setLevel(logging.DEBUG)
-ch_file = logging.FileHandler(filename= 'emb_' + applyfn + str(outdim)
-                                        + '_margeratio' + str(marge_ratio) +  '.log', mode='w')
+ch_file = logging.FileHandler(filename= dataname + '_emb_' + applyfn + str(outdim)
+                                        + '_margeratio' + str(marge_ratio) + '_reg' + str(reg) + '.log', mode='w')
 ch_file.setLevel(logging.DEBUG)
 ch_file.setFormatter(FORMAT)
 ch = logging.StreamHandler()
@@ -113,8 +114,8 @@ def SGDexp(state):
             state.test = np.mean(RankScoreIdx(Pr, state.teIdxl, state.teIdxr))
             _log.debug('Testing set Mean Rank: %s  Score: %s' % (state.test, np.mean(Pr[state.teIdxr, state.teIdxl])))
             state.cepoch = epoch_count
-            savemat('emb_dim' + str(state.outdim) + '_method' + state.applyfn +
-                    '_marge' + str(state.marge_ratio) + '.mat', {'mappedX': embedding.E.eval()})
+            savemat(dataname + '_emb_dim' + str(state.outdim) + '_method' + state.applyfn +
+                    '_marge' + str(state.marge_ratio) + '_reg' + str(reg) + '.mat', {'mappedX': embedding.E.eval()})
             _log.debug('The saving took %s seconds' % (time.time() - timeref))
             timeref = time.time()
 
@@ -123,7 +124,7 @@ def SGDexp(state):
         out = []
         outd = []
         state.bestout = np.inf
-        if state.lrmapping < state.baselr:      # if the learning rate is not growing
+        if state.lrmapping < state.baselr or (epoch_count // 2000):      # if the learning rate is not growing
             state.baselr *= 0.4
         state.lrmapping = state.baselr
         f = open(state.savepath + '/' + 'state.pkl', 'wb')
@@ -151,7 +152,7 @@ if __name__ == '__main__':
     state.Idxr = np.asarray(I[:, 1].flatten() - 1, dtype='int32')
 
     state.seed = 213
-    state.totepochs = 1200
+    state.totepochs = 2000
     state.lrmapping = 1.
     state.baselr = state.lrmapping
     state.nsamples, state.nfeatures = np.shape(X)
@@ -163,8 +164,9 @@ if __name__ == '__main__':
     state.nbatches = 1  # mini-batch SGD is not helping here
     state.neval = 10
     state.initial_dim = 300
-    state.reg = 1.
+    state.reg = reg
     state.perplexity = 20
+
 
 
     # cosine similarity measure
