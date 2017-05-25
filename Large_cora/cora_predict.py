@@ -12,11 +12,11 @@ import time
 import pickle
 
 # experimental parameters
-dataname = 'citeseer'
+dataname = 'cora'
 applyfn = 'softmax'
 
 # adjustable parameters
-outdim = 2
+outdim = 20
 marge_ratio = 1.
 reg = 1.
 
@@ -40,7 +40,7 @@ def SGDexp(state):
     np.random.seed(state.seed)
 
     # split the data into training/testing set
-    state.ntrain = math.floor(1. * state.nlinks)
+    state.ntrain = math.floor(.9 * state.nlinks)
     state.ntest = state.nlinks - state.ntrain
     indices = np.random.permutation(state.nlinks)
     state.trIdxl = state.Idxl[indices[: state.ntrain]]
@@ -152,7 +152,7 @@ if __name__ == '__main__':
     state.Idxr = np.asarray(I[:, 1].flatten() - 1, dtype='int32')
 
     state.seed = 213
-    state.totepochs = 1000
+    state.totepochs = 3000
     state.lrmapping = 10.
     state.baselr = state.lrmapping
     state.nsamples, state.nfeatures = np.shape(X)

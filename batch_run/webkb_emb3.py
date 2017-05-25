@@ -12,18 +12,18 @@ import time
 import pickle
 
 # experimental parameters
-dataname = 'citeseer'
-applyfn = 'softmax'
+dataname = 'webkb'
+applyfn = 'softcauchy'
 
 # adjustable parameters
-outdim = 20
+outdim = 2
 marge_ratio = 1.
-reg = 0.1
+reg = 1.
 
 FORMAT = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 _log = logging.getLogger(dataname +' experiment')
 _log.setLevel(logging.DEBUG)
-ch_file = logging.FileHandler(filename= dataname + 'emb_' + applyfn + str(outdim)
+ch_file = logging.FileHandler(filename= dataname + '_emb_' + applyfn + str(outdim)
                                         + '_margeratio' + str(marge_ratio) + '_reg' + str(reg) + '.log', mode='w')
 ch_file.setLevel(logging.DEBUG)
 ch_file.setFormatter(FORMAT)
@@ -40,7 +40,7 @@ def SGDexp(state):
     np.random.seed(state.seed)
 
     # split the data into training/testing set
-    state.ntrain = math.floor(.9 * state.nlinks)
+    state.ntrain = math.floor(1. * state.nlinks)
     state.ntest = state.nlinks - state.ntrain
     indices = np.random.permutation(state.nlinks)
     state.trIdxl = state.Idxl[indices[: state.ntrain]]
@@ -114,8 +114,8 @@ def SGDexp(state):
             state.test = np.mean(RankScoreIdx(Pr, state.teIdxl, state.teIdxr))
             _log.debug('Testing set Mean Rank: %s  Score: %s' % (state.test, np.mean(Pr[state.teIdxr, state.teIdxl])))
             state.cepoch = epoch_count
-            savemat('emb_dim' + str(state.outdim) + '_method' + state.applyfn +
-                    '_marge' + str(state.marge_ratio) + '.mat', {'mappedX': embedding.E.eval()})
+            savemat(dataname + '_emb_dim' + str(state.outdim) + '_method' + state.applyfn +
+                    '_marge' + str(state.marge_ratio) + '_reg' + str(reg) + '.mat', {'mappedX': embedding.E.eval()})
             _log.debug('The saving took %s seconds' % (time.time() - timeref))
             timeref = time.time()
 
@@ -152,8 +152,8 @@ if __name__ == '__main__':
     state.Idxr = np.asarray(I[:, 1].flatten() - 1, dtype='int32')
 
     state.seed = 213
-    state.totepochs = 1000
-    state.lrmapping = 10.
+    state.totepochs = 2000
+    state.lrmapping = 1.
     state.baselr = state.lrmapping
     state.nsamples, state.nfeatures = np.shape(X)
     state.nlinks = np.shape(state.Idxl)[0]
