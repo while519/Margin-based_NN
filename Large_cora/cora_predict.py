@@ -10,10 +10,11 @@ import logging
 import math
 import time
 import pickle
+import scipy.sparse as sp
 
 # experimental parameters
 dataname = 'cora'
-applyfn = 'softmax'
+applyfn = 'softcauchy'
 
 # adjustable parameters
 outdim = 20
@@ -23,7 +24,7 @@ reg = 1.
 FORMAT = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 _log = logging.getLogger(dataname +' experiment')
 _log.setLevel(logging.DEBUG)
-ch_file = logging.FileHandler(filename= dataname + 'emb_' + applyfn + str(outdim)
+ch_file = logging.FileHandler(filename= dataname + '_emb_' + applyfn + str(outdim)
                                         + '_margeratio' + str(marge_ratio) + '_reg' + str(reg) + '.log', mode='w')
 ch_file.setLevel(logging.DEBUG)
 ch_file.setFormatter(FORMAT)
@@ -40,15 +41,28 @@ def SGDexp(state):
     np.random.seed(state.seed)
 
     # split the data into training/testing set
-    state.ntrain = math.floor(.9 * state.nlinks)
-    state.ntest = state.nlinks - state.ntrain
-    indices = np.random.permutation(state.nlinks)
-    state.trIdxl = state.Idxl[indices[: state.ntrain]]
-    state.trIdxr = state.Idxr[indices[: state.ntrain]]
+    state.n_train = math.floor(.9 * state.nsamples)
+    state.n_test = state.nsamples - state.n_train
+    indices = np.random.permutation(state.nsamples)
+    state.trid = indices[: state.n_train]
+    state.teid = indices[state.n_train :]
 
-    state.teIdxl = state.Idxl[indices[state.ntrain :]]
-    state.teIdxr = state.Idxr[indices[state.ntrain :]]
+    state.trIdxl = []
+    state.trIdxr = []
+    state.teIdxl = []
+    state.teIdxr = []
+    for di in range(state.trid):
+        state.trIdxl += [di] * len(doc_asymlinks[di])
+        state.trIdxr += state.link_list[di]
 
+    for di in range(state.teid):
+        state.teIdxl += [di] * len(doc_asymlinks[di])
+        state.teIdxr += state.link_list[di]
+    # state.Idxl = np.asarray(Idxl, dtype='int32')  # numpy indexes start from 0
+    # state.Idxr = np.asarray(Idxr, dtype='int32')
+
+    state.ntrain = len(state.trIdxl)
+    state.ntest = len(state.teIdxl)
     state.train = np.mean(RankScoreIdx(simi_X, state.trIdxl, state.trIdxr))
     _log.debug('Content Only: Training set Mean Rank: %s ' % (state.train,))
     state.test = np.mean(RankScoreIdx(simi_X, state.teIdxl, state.teIdxr))
@@ -82,7 +96,7 @@ def SGDexp(state):
         trainIdxrn = listidx[np.arange(state.ntrain) % len(listidx)]
 
 
-        for _ in range(20):
+        for _ in range(5):
             for ii in range(state.nbatches):
                 tmpl = trainIdxl[ii * batchsize: (ii + 1) * batchsize]
                 tmpr = trainIdxr[ii * batchsize: (ii + 1) * batchsize]
@@ -114,8 +128,8 @@ def SGDexp(state):
             state.test = np.mean(RankScoreIdx(Pr, state.teIdxl, state.teIdxr))
             _log.debug('Testing set Mean Rank: %s  Score: %s' % (state.test, np.mean(Pr[state.teIdxr, state.teIdxl])))
             state.cepoch = epoch_count
-            savemat('emb_dim' + str(state.outdim) + '_method' + state.applyfn +
-                    '_marge' + str(state.marge_ratio) + '.mat', {'mappedX': embedding.E.eval()})
+            savemat(dataname + '_emb_dim' + str(state.outdim) + '_method' + state.applyfn +
+                    '_marge' + str(state.marge_ratio) + '_reg' + str(reg) +  '.mat', {'mappedX': embedding.E.eval()})
             _log.debug('The saving took %s seconds' % (time.time() - timeref))
             timeref = time.time()
 
@@ -127,9 +141,9 @@ def SGDexp(state):
         if state.lrmapping < state.baselr or (epoch_count // 2000):      # if the learning rate is not growing
             state.baselr *= 0.4
         state.lrmapping = state.baselr
-        f = open(state.savepath + '/' + 'state.pkl', 'wb')
-        pickle.dump(state, f, -1)
-        f.close()
+        # f = open(state.savepath + '/' + 'state.pkl', 'wb')
+        # pickle.dump(state, f, -1)
+        # f.close()
 
 
 if __name__ == '__main__':
@@ -137,7 +151,7 @@ if __name__ == '__main__':
     state = DD()
 
     # check the datapath
-    datapath = '../Data/'
+    datapath = '../New_data/'
     assert datapath is not None
 
     if 'Output' not in os.listdir('../'):
@@ -145,23 +159,39 @@ if __name__ == '__main__':
     state.savepath = '../Output'
 
     # load the matlab data file
-    mat = loadmat(datapath + dataname + '.mat')
-    X = np.array(mat['X'], np.float32)
-    I = np.array(mat['I'], np.float32)
-    state.Idxl = np.asarray(I[:, 0].flatten() - 1, dtype='int32')  # numpy indexes start from 0
-    state.Idxr = np.asarray(I[:, 1].flatten() - 1, dtype='int32')
+    doc_ids = pickle.load(open(datapath + dataname + '/doc_ids.pkl', 'rb'))
+    doc_cnt = pickle.load(open(datapath + dataname + '/doc_cnt.pkl', 'rb'))
+    doc_symlinks = pickle.load(open(datapath + dataname + '/doc_links_sym.pkl', 'rb'))
+    voca = pickle.load(open(datapath + dataname + '/voca.pkl', 'rb'))
+    doc_asymlinks = pickle.load(open(datapath + dataname + '/doc_links_asym.pkl', 'rb'))
 
+    n_doc = len(doc_cnt)
+    n_voca = len(voca)
+    X = sp.lil_matrix((n_doc, n_voca))
+    for di in range(n_doc):
+        for idx, wi in enumerate(doc_ids[di]):
+            X[di, wi] = doc_cnt[di][idx]
+
+    preprocessing_tennique = 'ca'
+
+    if preprocessing_tennique == 'lsa':
+        u, s, vt = sp.linalg.svds(X, 300, which='LM')
+        X = u
+    elif preprocessing_tennique == 'ca':
+        u, s, vt = sp.linalg.svds(X, 300, which='LM')
+        X = u * np.sqrt(s)
+
+    state.link_list = doc_asymlinks
     state.seed = 213
-    state.totepochs = 3000
-    state.lrmapping = 10.
+    state.totepochs = 500
+    state.lrmapping = 1.
     state.baselr = state.lrmapping
     state.nsamples, state.nfeatures = np.shape(X)
-    state.nlinks = np.shape(state.Idxl)[0]
     state.outdim = outdim
     state.applyfn = applyfn
     state.marge_ratio = marge_ratio
     state.marge = marge_ratio / state.nsamples
-    state.nbatches = 1  # mini-batch SGD is not helping here
+    state.nbatches = 100  # mini-batch SGD is not helping here
     state.neval = 10
     state.initial_dim = 300
     state.reg = reg
