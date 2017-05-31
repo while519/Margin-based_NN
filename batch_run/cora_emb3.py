@@ -23,7 +23,7 @@ reg = 1.
 FORMAT = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 _log = logging.getLogger(dataname +' experiment')
 _log.setLevel(logging.DEBUG)
-ch_file = logging.FileHandler(filename= dataname + '_emb_' + applyfn + str(outdim)
+ch_file = logging.FileHandler(filename= dataname + '_embx_' + applyfn + str(outdim)
                                         + '_margeratio' + str(marge_ratio) + '_reg' + str(reg) + '.log', mode='w')
 ch_file.setLevel(logging.DEBUG)
 ch_file.setFormatter(FORMAT)
@@ -114,7 +114,7 @@ def SGDexp(state):
             state.test = np.mean(RankScoreIdx(Pr, state.teIdxl, state.teIdxr))
             _log.debug('Testing set Mean Rank: %s  Score: %s' % (state.test, np.mean(Pr[state.teIdxr, state.teIdxl])))
             state.cepoch = epoch_count
-            savemat(dataname + '_emb_dim' + str(state.outdim) + '_method' + state.applyfn +
+            savemat(dataname + '_embx_dim' + str(state.outdim) + '_method' + state.applyfn +
                     '_marge' + str(state.marge_ratio) + '_reg' + str(reg) + '.mat', {'mappedX': embedding.E.eval()})
             _log.debug('The saving took %s seconds' % (time.time() - timeref))
             timeref = time.time()
@@ -153,7 +153,7 @@ if __name__ == '__main__':
 
     state.seed = 213
     state.totepochs = 2000
-    state.lrmapping = 1.
+    state.lrmapping = 10.
     state.baselr = state.lrmapping
     state.nsamples, state.nfeatures = np.shape(X)
     state.nlinks = np.shape(state.Idxl)[0]

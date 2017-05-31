@@ -23,7 +23,7 @@ reg = 5.
 FORMAT = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 _log = logging.getLogger(dataname +' experiment')
 _log.setLevel(logging.DEBUG)
-ch_file = logging.FileHandler(filename= dataname + '_predict_' + applyfn + str(outdim)
+ch_file = logging.FileHandler(filename= dataname + '_predictx_' + applyfn + str(outdim)
                                         + '_margeratio' + str(marge_ratio) + '_reg' + str(reg) + '.log', mode='w')
 ch_file.setLevel(logging.DEBUG)
 ch_file.setFormatter(FORMAT)
@@ -153,7 +153,7 @@ if __name__ == '__main__':
 
     state.seed = 213
     state.totepochs = 2000
-    state.lrmapping = 1.
+    state.lrmapping = 10.
     state.baselr = state.lrmapping
     state.nsamples, state.nfeatures = np.shape(X)
     state.nlinks = np.shape(state.Idxl)[0]
