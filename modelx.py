@@ -591,6 +591,36 @@ def trainFn2Member(prdist, embedding, Q,  marge=1., reg=0.):
     return theano.function(list_in, [T.mean(costr), T.mean(out), T.mean(p), T.mean(meanKL)],
                            updates=updates, on_unused_input='warn')
 
+    def trainFn3Member(prdist, embedding, Q,  marge=1., reg=0.):
+    # declare input variables
+    inpl, inpr, inprn = T.ivectors(3)
+    lrparams = T.scalar('lr parameters')
+
+
+    Dist = L2distance(embedding.E)
+    Pr = prdist(Dist) + T.constant(1e-12)
+    p = Pr[inpr, inpl]
+    prn = Pr[inprn, inpl]
+
+
+    costr, outr = margincost(p, prn, marge)
+    KL =  Pr * T.log(Pr / Q)
+    meanKL = T.mean(KL, axis=None)
+
+    reg_term = reg * meanKL
+    cost = costr + reg_term
+    cost = cost * embedding.E.shape[0]
+    out = outr
+
+    list_in = [inpl, inpr, inprn, lrparams]
+
+    # define the updates dict
+    gparams = T.grad(cost, embedding.E, disconnected_inputs='warn')
+    updates = OrderedDict({embedding.E: embedding.E - lrparams * gparams})
+
+    return theano.function(list_in, [T.mean(costr), T.mean(out), T.mean(p), T.mean(meanKL)],
+                           updates=updates, on_unused_input='warn')
+
     # ----------------------------------------------------------------------------
 def Hbeta(D=np.array([]), beta=1.0):
     """Compute the perplexity and the P-row for a specific value of the precision of a Gaussian distribution."""
