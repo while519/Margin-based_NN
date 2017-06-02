@@ -32,14 +32,14 @@ class RelationalTopicModel:
 
         self.alpha = alpha
 
-        self.gamma = np.random.gamma(100., 1. / 100, [self.n_doc, self.n_topic])
-        self.beta = np.random.dirichlet([5] * self.n_voca, self.n_topic)
+        self.gamma = np.random.gamma(100., 1. / 100, [self.n_doc, self.n_topic])        # (n_doc, n_topic)
+        self.beta = np.random.dirichlet([5] * self.n_voca, self.n_topic)                # (n_topic, n_voca)
 
         self.nu = 0
         self.eta = np.random.normal(0., 1, self.n_topic)
 
         self.phi = list()
-        self.pi = np.zeros([self.n_doc, self.n_topic])
+        self.pi = np.zeros([self.n_doc, self.n_topic])              # (n_doc, n_topic)
 
         self.rho = rho
 
@@ -88,9 +88,19 @@ class RelationalTopicModel:
 
         return elbo
 
+    def compute_link_probability(self):
+        Pr = np.zeros(self.n_doc, self.n_doc)
+
+        for di in range(self.n_doc):
+            for adi in range(self.n_doc):
+                Pr[di, adi] = np.dot(self.eta,
+                               self.pi[di] * self.pi[adi]) + self.nu  # E_q[log p(y_{d1,d2}|z_{d1},z_{d2},\eta,\nu)]
+        np.fill_diagonal(Pr, -np.inf)
+        return Pr
+
     def variation_update(self, doc_ids, doc_cnt, doc_links):
         # update phi, gamma
-        e_log_theta = psi(self.gamma) - psi(np.sum(self.gamma, 1))[:, np.newaxis]
+        e_log_theta = psi(self.gamma) - psi(np.sum(self.gamma, 1))[:, np.newaxis]   # (n_doc, n_topic)
 
         new_beta = np.zeros([self.n_topic, self.n_voca])
 
@@ -134,7 +144,7 @@ class RelationalTopicModel:
         pi_alpha = np.zeros(self.n_topic) + self.alpha / (self.alpha * self.n_topic) * self.alpha / (self.alpha * self.n_topic)
 
         self.nu = np.log(num_links - np.sum(pi_sum)) - np.log(
-            self.rho * (self.n_topic - 1) / self.n_topic + num_links - np.sum(pi_sum))
+            self.rho * (self.n_topic - 1) / self.n_topic + num_links - np.sum(pi_sum))          # different from the paper
         self.eta = np.log(pi_sum) - np.log(pi_sum + self.rho * pi_alpha) - self.nu
 
     def save_model(self, output_directory, vocab=None):

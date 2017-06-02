@@ -13,7 +13,7 @@ import pickle
 
 # experimental parameters
 dataname = 'webkb'
-applyfn = 'softmax'
+applyfn = 'softcauchy'
 
 # adjustable parameters
 outdim = 20
@@ -60,7 +60,7 @@ def SGDexp(state):
 
     # Function compilation
     apply_fn = eval(state.applyfn)
-    trainfunc = trainFn2Member(apply_fn, embedding, state.Q, state.marge, state.reg)
+    trainfunc = trainFn3Member(apply_fn, embedding, state.Q, state.marge, state.reg)
 
     out = []
     outb = []
@@ -153,7 +153,7 @@ if __name__ == '__main__':
 
     state.seed = 213
     state.totepochs = 2000
-    state.lrmapping = 1.
+    state.lrmapping = 100.
     state.baselr = state.lrmapping
     state.nsamples, state.nfeatures = np.shape(X)
     state.nlinks = np.shape(state.Idxl)[0]

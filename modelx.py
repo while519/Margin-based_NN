@@ -591,7 +591,7 @@ def trainFn2Member(prdist, embedding, Q,  marge=1., reg=0.):
     return theano.function(list_in, [T.mean(costr), T.mean(out), T.mean(p), T.mean(meanKL)],
                            updates=updates, on_unused_input='warn')
 
-    def trainFn3Member(prdist, embedding, Q,  marge=1., reg=0.):
+def trainFn3Member(prdist, embedding, Q,  marge=1., reg=0.):
     # declare input variables
     inpl, inpr, inprn = T.ivectors(3)
     lrparams = T.scalar('lr parameters')
@@ -604,7 +604,8 @@ def trainFn2Member(prdist, embedding, Q,  marge=1., reg=0.):
 
 
     costr, outr = margincost(p, prn, marge)
-    KL =  Pr * T.log(Pr / Q)
+    Q = Q + T.constant(1e-12)
+    KL = Pr * T.log(Pr / Q)
     meanKL = T.mean(KL, axis=None)
 
     reg_term = reg * meanKL
