@@ -81,6 +81,16 @@ elseif (dataset=='cora')
   A = full(Atrain);
   A = A | A';
   A = double(A);
+elseif (dataset=='citeseer')
+  load datasets/citeseer_split.mat
+  A = full(Atrain);
+  A = A | A';
+  A = double(A);
+elseif (dataset=='webkb')
+  load datasets/webkb_split.mat
+  A = full(Atrain);
+  A = A | A';
+  A = double(A);
 end
 
 
