@@ -76,6 +76,11 @@ elseif (dataset=='m')
   A = rand(D,D);
   A = (A + A') ./ 2;
   A = A < 0.2;
+elseif (dataset=='cora')
+  load datasets/cora_split.mat
+  A = full(Atrain);
+  A = A | A';
+  A = double(A);
 end
 
 
