@@ -53,7 +53,8 @@ def SGDexp(state):
     _log.debug('Content Only: Training set Mean Rank: %s ' % (state.train,))
     state.test = np.mean(RankScoreIdx(simi_X, state.teIdxl, state.teIdxr))
     _log.debug('Content Only: Testing set Mean Rank: %s ' % (state.test,))
-
+    savemat('citeseer_sampled.mat',
+            {'trIdxl': state.trIdxl, 'trIdxr': state.trIdxr, 'teIdxl': state.teIdxl, 'teIdxr': state.teIdxr})
 
     # initialize
     embedding = Embeddings(np.random, state.nsamples, state.outdim)  # N x K
