@@ -35,7 +35,7 @@ paramOn = str2num(paramOn_str);
 %--------------------------------------------
 P=1; % one processor
 
-ITER  = 200;
+ITER  = 150;
 rand('state',sum(100*clock))
 
 % alpha priors
@@ -112,7 +112,7 @@ Nd = sum(dp,2);
 zeroIndex = find (Nd==0);
 
 % noninformative hack
-dp(zeroIndex,:) = ones(length(zeroIndex),T);
+dp(zeroIndex,:) = ones(length(zeroIndex),T);        
 
 Nd = sum(dp,2);
 
@@ -122,7 +122,7 @@ eta = ones(T,1) * scalareta;
 
 dp2 = dp ./ repmat(Nd,1,T);
 c = (repmat(eta',D,1) .* dp2)*(dp2)';  % c is the D by D matrix of inner products
-c = c(find(~(mod([1:D^2],D+1)==1)));
+c = c(find(~(mod([1:D^2],D+1)==1)));    % diagonal zeros
 
 %nu  = min([min(-max(eta)*c(:)) - 1]);
 
@@ -165,7 +165,7 @@ for iter = 1:ITER
     eta = ones(T,1) * scalareta;
     %[eta,nu] = eta_nu_Vec(dp, A, [eta;nu]');
   end
-
+   
   % vector version
   if (iter > 15 && paramOn == 2)
     theta = [eta;nu];
@@ -219,6 +219,11 @@ for iter = 1:ITER
   end
 
 end
+
+Nd = sum(dp, 2);
+dp3 = dp ./ repmat(Nd,1,T);
+c = (repmat(eta',D,1) .* dp3)*(dp3)';
+save('./output/citeseer_result.mat', 'c', 'dp', 'wp', 'nu', 'eta', 'iter', 'z', 'teIdxl_', 'teIdxr_');
 
 elapsedTime = toc;
 
