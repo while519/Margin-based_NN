@@ -76,17 +76,17 @@ elseif (dataset=='m')
   A = rand(D,D);
   A = (A + A') ./ 2;
   A = A < 0.2;
-elseif (dataset=='cora')
+elseif (dataset=='1')
   load datasets/cora_split.mat
   A = full(Atrain);
   A = A | A';
   A = double(A);
-elseif (dataset=='citeseer')
+elseif (dataset=='2')
   load datasets/citeseer_split.mat
   A = full(Atrain);
   A = A | A';
   A = double(A);
-elseif (dataset=='webkb')
+elseif (dataset=='3')
   load datasets/webkb_split.mat
   A = full(Atrain);
   A = A | A';
