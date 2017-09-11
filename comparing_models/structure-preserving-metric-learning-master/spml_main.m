@@ -2,7 +2,7 @@
 %
 clear
 clc
-
+rng(213)
 load data/citeseer_SPML.mat
 
 %% normalize data
@@ -29,14 +29,30 @@ params.diagonal = true;
 model = spml(X', A, params);
 
 %% Compute mean average rank
+Dist = metricDistanceMask(X', model.M, ones(D,D));
 N_test = length(teIdxl_);
 RANK = [];
 
 for ii = 1 : N_test
     I = double(teIdxl_(ii)) * ones(D, 1);
     J = 1 : D;
-    Dist = metricDistanceMask(X', model.M, sparse(I,J,true,D,D));  
+    %Dist = metricDistanceMask(X', model.M, sparse(I,J,true,D,D));  
     ic = tiedrank(Dist(teIdxl_(ii), :)) -1;
     RANK = [RANK; ic(teIdxr_(ii))];
+end
+MAP = mean(RANK)
+
+
+trIdxl_ = trIdxl + 1;
+trIdxr_ = trIdxr + 1;
+N_train = length(trIdxl_);
+RANK = [];
+
+for ii = 1 : N_train
+    I = double(trIdxl_(ii)) * ones(D, 1);
+    J = 1 : D;
+    %Dist = metricDistanceMask(X', model.M, sparse(I,J,true,D,D));  
+    ic = tiedrank(Dist(trIdxl_(ii), :)) -1;
+    RANK = [RANK; ic(trIdxr_(ii))];
 end
 MAP = mean(RANK)
