@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
   Try
   TStr OutFPrx = Env.GetIfArgPrefixStr("-o:", "", "Output Graph data prefix");
   const TStr InFNm = Env.GetIfArgPrefixStr("-i:", "./1912.edges", "Input edgelist file name");
-  const TStr LabelFNm = Env.GetIfArgPrefixStr("-l:", "./1912.nodenames", "Input file name for node names (Node ID, Node label) ");
+  const TStr LabelFNm = Env.GetIfArgPrefixStr("-l:", "", "Input file name for node names (Node ID, Node label) ");
   const TStr AttrFNm = Env.GetIfArgPrefixStr("-a:", "./1912.nodefeat", "Input node attribute file name");
   const TStr ANameFNm = Env.GetIfArgPrefixStr("-n:", "./1912.nodefeatnames", "Input file name for node attribute names");
   int OptComs = Env.GetIfArgPrefixInt("-c:", 10, "The number of communities to detect (-1: detect automatically)");
@@ -103,6 +103,14 @@ int main(int argc, char* argv[]) {
     fprintf(F, "\n");
   }
   fclose(F);
+
+  FILE* F1 = fopen((OutFPrx + "NodeIdx.txt").CStr(), "wt");
+  for (int u = 0; u < NodeNameH.Len(); u++) {
+      fprintf(F1, "%s", NodeNameH.GetKey(u));
+      if (u < NodeNameH.Len() - 1) { fprintf(F1, "\n"); }
+  }
+  fprintf(F1, "\n");
+  fclose(F1);
 
   Catch
 
