@@ -139,10 +139,10 @@ if __name__ == '__main__':
     X = np.array(mat['X'], np.float32)
 
 
-    state.trIdxl = np.array(mat['trIdxl'], dtype='int32')
-    state.trIdxr = np.array(mat['trIdxr'], dtype='int32')
-    state.teIdxl = np.array(mat['teIdxl'], dtype='int32')
-    state.teIdxr = np.array(mat['teIdxr'], dtype='int32')
+    state.trIdxl = np.array(mat['trIdxl'], dtype='int32').flatten()
+    state.trIdxr = np.array(mat['trIdxr'], dtype='int32').flatten()
+    state.teIdxl = np.array(mat['teIdxl'], dtype='int32').flatten()
+    state.teIdxr = np.array(mat['teIdxr'], dtype='int32').flatten()
 
     state.ntrain = np.shape(state.trIdxl)[0]
     state.ntest = np.shape(state.teIdxl)[0]

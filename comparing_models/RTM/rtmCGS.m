@@ -35,7 +35,7 @@ paramOn = str2num(paramOn_str);
 %--------------------------------------------
 P=1; % one processor
 
-ITER  = 150;
+ITER  = 90;
 rand('state',sum(100*clock))
 
 % alpha priors
@@ -223,7 +223,7 @@ end
 Nd = sum(dp, 2);
 dp3 = dp ./ repmat(Nd,1,T);
 c = (repmat(eta',D,1) .* dp3)*(dp3)';
-save('./output/citeseer_result.mat', 'c', 'dp', 'wp', 'nu', 'eta', 'iter', 'z', 'teIdxl_', 'teIdxr_');
+save(['./output/cora_T' num2str(T) '_result.mat'], 'c', 'dp', 'wp', 'nu', 'eta', 'iter', 'z', 'teIdxl_', 'teIdxr_');
 
 elapsedTime = toc;
 
