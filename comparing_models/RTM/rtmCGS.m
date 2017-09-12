@@ -224,7 +224,7 @@ Nd = sum(dp, 2);
 dp3 = dp ./ repmat(Nd,1,T);
 c = (repmat(eta',D,1) .* dp3)*(dp3)';
 
-save('./output/webkb_result_v01.mat', 'c', 'dp', 'wp', 'nu', 'eta', 'iter', 'z', 'teIdxl_', 'teIdxr_');
+save(['./output/cora_c' num2str(T) '_v01.mat'], 'c', 'dp', 'wp', 'nu', 'eta', 'iter', 'z', 'teIdxl_', 'teIdxr_');
 
 
 elapsedTime = toc;
