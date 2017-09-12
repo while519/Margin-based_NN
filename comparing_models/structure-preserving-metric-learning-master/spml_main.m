@@ -3,7 +3,7 @@
 clear
 clc
 rng(213)
-load data/citeseer_SPML.mat
+load data/webkb_split_v01.mat
 
 %% normalize data
 

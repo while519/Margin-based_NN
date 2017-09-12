@@ -77,17 +77,17 @@ elseif (dataset=='m')
   A = (A + A') ./ 2;
   A = A < 0.2;
 elseif (dataset=='1')
-  load datasets/cora_split.mat
+  load datasets/cora_split_v01.mat
   A = full(Atrain);
   A = A | A';
   A = double(A);
 elseif (dataset=='2')
-  load datasets/citeseer_split.mat
+  load datasets/citeseer_split_v01.mat
   A = full(Atrain);
   A = A | A';
   A = double(A);
 elseif (dataset=='3')
-  load datasets/webkb_split.mat
+  load datasets/webkb_split_v01.mat
   A = full(Atrain);
   A = A | A';
   A = double(A);
@@ -223,7 +223,7 @@ end
 Nd = sum(dp, 2);
 dp3 = dp ./ repmat(Nd,1,T);
 c = (repmat(eta',D,1) .* dp3)*(dp3)';
-save('./output/citeseer_result.mat', 'c', 'dp', 'wp', 'nu', 'eta', 'iter', 'z', 'teIdxl_', 'teIdxr_');
+save('./output/webkb_result_v01.mat', 'c', 'dp', 'wp', 'nu', 'eta', 'iter', 'z', 'teIdxl_', 'teIdxr_');
 
 elapsedTime = toc;
 
