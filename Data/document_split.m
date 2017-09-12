@@ -1,5 +1,6 @@
 %% Fully split the data into train/test partitions
 %
+rng(213);
 [D,W] = size(X);
 CV0 = cvpartition(D, 'KFold', 5);
 
@@ -13,18 +14,18 @@ trI_indicator = logical(prod(Lia,2));
 teI = I(~trI_indicator, :);
 trI = I(trI_indicator, :);
 
-trIdxl = trI(:, 1);
-trIdxr = trI(:, 2);
+trIdxl_ = trI(:, 1);
+trIdxr_ = trI(:, 2);
 
-teIdxl = teI(:, 1);
-teIdxr = teI(:, 2);
+teIdxl_ = teI(:, 1);
+teIdxr_ = teI(:, 2);
 
 %%
 %
-teIdxl_ = teIdxl + 1;
-trIdxl_ = trIdxl + 1;
-teIdxr_ = teIdxr + 1;
-trIdxr_ = trIdxr + 1;
+teIdxl = teIdxl_ - 1;
+trIdxl = trIdxl_ - 1;
+teIdxr = teIdxr_ - 1;
+trIdxr = trIdxr_ - 1;
 
 Atrain = zeros(D,D);    % Adjacency matrix for the training set 
 for ii = 1 : length(trIdxl)
@@ -45,5 +46,5 @@ for nn = 1 : sum(X(:))
     w = [w; w_indice];
 end
 
-save('webkb_split_v01.mat', 'Atrain', 'd', 'D', 'N', 'w', 'W', 'word', 'teIdxl_', 'teIdxr_', ...
+save('webkb_split_v01.mat', 'Atrain', 'd', 'D', 'N', 'w', 'W', 'word', 'teIdxl_', 'teIdxr_', 'X',...
         'trIdxl_', 'trIdxr_', 'trIdxl', 'trIdxr', 'teIdxl', 'teIdxr', 'webpage_classnames', 'webpage_ids');
