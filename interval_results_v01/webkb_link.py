@@ -164,7 +164,7 @@ if __name__ == '__main__':
     state.reg = reg
     state.perplexity = 20
 
-
+    X = X / np.sqrt(np.sum(X ** 2, axis=1)[:, np.newaxis])
 
     # cosine similarity measure
     simi_X = consine_simi(X)
