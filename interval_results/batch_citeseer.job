@@ -4,12 +4,13 @@
 #$ -V -j y
 #$ -M while725@gmail.com
 #$ -m abe
-#$ -o out.cora_predict_margeratio_dim
-#$ -N cora_predict_margeratio_dim
+#$ -o out.citeseer_tsne
+#$ -N citeseer_tsne
 #$ -l h_rt=71:00:00
 #$ -l h_vmem=16000M
 #$ -l h="comp[2-9]*|comp1[1-9]*"
+#$ -t 1-6
 echo "This code is running on " ; hostname
 echo "Start - `date`"
-python3 ./cora_predict.py
+python3 ./citeseer_predict$SGE_TASK_ID.py
 echo "Finish - `date`"

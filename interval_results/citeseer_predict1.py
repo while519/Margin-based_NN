@@ -12,18 +12,18 @@ import time
 import pickle
 
 # experimental parameters
-dataname = 'cora'
+dataname = 'citeseer'
 applyfn = 'softcauchy'
 
 # adjustable parameters
 outdim = 20
 marge_ratio = 1.
-reg = 0.
+reg = 1.
 
 FORMAT = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 _log = logging.getLogger(dataname +' experiment')
 _log.setLevel(logging.DEBUG)
-ch_file = logging.FileHandler(filename= dataname + '_predictx_' + applyfn + str(outdim)
+ch_file = logging.FileHandler(filename= dataname + '_predictx1_' + applyfn + str(outdim)
                                         + '_margeratio' + str(marge_ratio) + '_reg' + str(reg) + '.log', mode='w')
 ch_file.setLevel(logging.DEBUG)
 ch_file.setFormatter(FORMAT)
@@ -104,7 +104,7 @@ def SGDexp(state):
             state.test = np.mean(RankScoreIdx(Pr, state.teIdxl, state.teIdxr))
             _log.debug('Testing set Mean Rank: %s  Score: %s' % (state.test, np.mean(Pr[state.teIdxr, state.teIdxl])))
             state.cepoch = epoch_count
-            savemat(dataname + '_predict_dim' + str(state.outdim) + '_method' + state.applyfn +
+            savemat(dataname + '_predict1_dim' + str(state.outdim) + '_method' + state.applyfn +
                     '_marge' + str(state.marge_ratio) + '_reg' + str(reg) +  '.mat', {'mappedX': embedding.E.eval(), 'Pr': Pr})
             _log.debug('The saving took %s seconds' % (time.time() - timeref))
             timeref = time.time()
@@ -135,7 +135,7 @@ if __name__ == '__main__':
     state.savepath = '../Output'
 
     # load the matlab data file
-    mat = loadmat(datapath + dataname + '_split_v01.mat')
+    mat = loadmat(datapath + dataname + '_split_v02.mat')
     X = np.array(mat['X'], np.float32)
 
 
@@ -150,8 +150,8 @@ if __name__ == '__main__':
 
 
     state.seed = 213
-    state.totepochs = 2000
-    state.lrmapping = 10.
+    state.totepochs = 3000
+    state.lrmapping = 1.
     state.baselr = state.lrmapping
     state.nsamples, state.nfeatures = np.shape(X)
     state.outdim = outdim
@@ -164,7 +164,7 @@ if __name__ == '__main__':
     state.reg = reg
     state.perplexity = 20
 
-
+    X = X / np.sqrt(np.sum(X ** 2, axis=1)[:, np.newaxis])
 
     # cosine similarity measure
     simi_X = consine_simi(X)
