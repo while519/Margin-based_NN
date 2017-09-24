@@ -12,13 +12,13 @@ import time
 import pickle
 
 # experimental parameters
-dataname = 'cora'
+dataname = 'citeseer'
 applyfn = 'softcauchy'
 
 # adjustable parameters
 outdim = 20
 marge_ratio = 1.
-reg = 1.
+reg = 0.
 
 FORMAT = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 _log = logging.getLogger(dataname +' experiment')
@@ -151,7 +151,7 @@ if __name__ == '__main__':
 
     state.seed = 213
     state.totepochs = 2000
-    state.lrmapping = 10.
+    state.lrmapping = 1000.
     state.baselr = state.lrmapping
     state.nsamples, state.nfeatures = np.shape(X)
     state.outdim = outdim
@@ -164,8 +164,7 @@ if __name__ == '__main__':
     state.reg = reg
     state.perplexity = 20
 
-    X = X / np.sqrt(np.sum(X**2, axis=1)[:, np.newaxis])
-
+    X = X / np.sqrt(np.sum(X ** 2, axis=1)[:, np.newaxis])
 
     # cosine similarity measure
     simi_X = consine_simi(X)
