@@ -18,7 +18,7 @@ applyfn = 'softcauchy'
 # adjustable parameters
 outdim = 20
 marge_ratio = 1.
-reg = 0.
+reg = 1.
 
 FORMAT = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 _log = logging.getLogger(dataname +' experiment')
@@ -38,6 +38,16 @@ _log.addHandler(ch_file)
 def SGDexp(state):
     _log.info(state)
     np.random.seed(state.seed)
+
+    # split the data into training/testing set
+    state.ntrain = math.floor(.9 * state.nlinks)
+    state.ntest = state.nlinks - state.ntrain
+    indices = np.random.permutation(state.nlinks)
+    state.trIdxl = state.Idxl[indices[: state.ntrain]]
+    state.trIdxr = state.Idxr[indices[: state.ntrain]]
+
+    state.teIdxl = state.Idxl[indices[state.ntrain :]]
+    state.teIdxr = state.Idxr[indices[state.ntrain :]]
 
     state.train = np.mean(RankScoreIdx(simi_X, state.trIdxl, state.trIdxr))
     _log.debug('Content Only: Training set Mean Rank: %s ' % (state.train,))
@@ -105,7 +115,7 @@ def SGDexp(state):
             _log.debug('Testing set Mean Rank: %s  Score: %s' % (state.test, np.mean(Pr[state.teIdxr, state.teIdxl])))
             state.cepoch = epoch_count
             savemat(dataname + '_predict_dim' + str(state.outdim) + '_method' + state.applyfn +
-                    '_marge' + str(state.marge_ratio) + '_reg' + str(reg) +  '.mat', {'mappedX': embedding.E.eval(), 'Pr': Pr})
+                    '_marge' + str(state.marge_ratio) + '_reg' + str(reg) + '.mat', {'mappedX': embedding.E.eval()})
             _log.debug('The saving took %s seconds' % (time.time() - timeref))
             timeref = time.time()
 
@@ -137,23 +147,16 @@ if __name__ == '__main__':
     # load the matlab data file
     mat = loadmat(datapath + dataname + '.mat')
     X = np.array(mat['X'], np.float32)
-
-
-    state.trIdxl = np.array(mat['trIdxl'], dtype='int32').flatten()
-    state.trIdxr = np.array(mat['trIdxr'], dtype='int32').flatten()
-    state.teIdxl = np.array(mat['teIdxl'], dtype='int32').flatten()
-    state.teIdxr = np.array(mat['teIdxr'], dtype='int32').flatten()
-
-    state.ntrain = np.shape(state.trIdxl)[0]
-    state.ntest = np.shape(state.teIdxl)[0]
-    state.nlinks = state.ntrain + state.ntest
-
+    I = np.array(mat['I'], np.float32)
+    state.Idxl = np.asarray(I[:, 0].flatten() - 1, dtype='int32')  # numpy indexes start from 0
+    state.Idxr = np.asarray(I[:, 1].flatten() - 1, dtype='int32')
 
     state.seed = 213
     state.totepochs = 2000
     state.lrmapping = 1000.
     state.baselr = state.lrmapping
     state.nsamples, state.nfeatures = np.shape(X)
+    state.nlinks = np.shape(state.Idxl)[0]
     state.outdim = outdim
     state.applyfn = applyfn
     state.marge_ratio = marge_ratio
@@ -164,7 +167,7 @@ if __name__ == '__main__':
     state.reg = reg
     state.perplexity = 20
 
-    X = X / np.sqrt(np.sum(X ** 2, axis=1)[:, np.newaxis])
+
 
     # cosine similarity measure
     simi_X = consine_simi(X)
